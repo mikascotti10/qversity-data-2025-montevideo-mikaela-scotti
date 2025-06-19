@@ -26,8 +26,9 @@ services:
       - ./dags:/opt/airflow/dags
       - ./logs:/opt/airflow/logs
       - ./data:/opt/airflow/data
+      - ./data/raw:/opt/airflow/data/raw     # <---- AGREGADA ESTA LÍNEA
     ports:
-      - "8080:8080"
+      - "8095:8080"
     command: >
       bash -c "
       airflow db init &&
