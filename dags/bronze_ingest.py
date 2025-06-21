@@ -5,14 +5,17 @@ import boto3
 import os
 import json
 import psycopg2
+import botocore
+
 
 def create_table_if_not_exists():
     conn = psycopg2.connect(
-        host="postgres",
-        database="airflow",
-        user="airflow",
-        password="airflow"
-    )
+    host="postgres",
+    database="qversity",
+    user="qversity-admin",
+    password="qversity-admin"
+)
+    
     cur = conn.cursor()
     cur.execute("""
         CREATE TABLE IF NOT EXISTS bronze_mobile_customers (
@@ -32,7 +35,7 @@ def download_from_s3():
     local_folder = '/opt/airflow/data/raw'
     os.makedirs(local_folder, exist_ok=True)
     local_path = os.path.join(local_folder, file_key)
-    s3 = boto3.client('s3')
+    s3 = boto3.client('s3', config=botocore.client.Config(signature_version=botocore.UNSIGNED))
     s3.download_file(bucket_name, file_key, local_path)
     print(f"Archivo descargado en: {local_path}")
 
@@ -40,9 +43,9 @@ def load_json_to_postgres():
     json_path = '/opt/airflow/data/raw/mobile_customers_messy_dataset.json'
     conn = psycopg2.connect(
         host="postgres",
-        database="airflow",
-        user="airflow",
-        password="airflow"
+        database="qversity",
+        user="qversity-admin",
+        password="qversity-admin"
     )
     cur = conn.cursor()
     with open(json_path, 'r') as f:
