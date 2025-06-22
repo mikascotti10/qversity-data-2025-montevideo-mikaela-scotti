@@ -1,0 +1,64 @@
+version: 2
+
+models:
+  - name: silver_customers
+    description: "Tabla Silver de clientes: contiene la información limpia, deduplicada y normalizada de cada cliente, lista para análisis y vinculaciones con otras entidades del negocio."
+    columns:
+      - name: customer_id
+        description: "Identificador único del cliente, debe ser no nulo y único."
+        tests:
+          - unique
+          - not_null
+      - name: email
+        description: "Correo electrónico principal del cliente. Requerido para comunicaciones y análisis."
+        tests:
+          - not_null
+      - name: registration_date
+        description: "Fecha en que el cliente se registró en el sistema (formato YYYY-MM-DD)."
+        tests:
+          - not_null
+
+  - name: silver_payment_history
+    description: "Pagos históricos realizados por los clientes. Cada fila representa un pago individual asociado a un cliente."
+    columns:
+      - name: customer_id
+        description: "Identificador del cliente que realizó el pago. Siempre debe existir en silver_customers."
+        tests:
+          - not_null
+          - relationships:
+              to: ref('silver_customers')
+              field: customer_id
+      - name: payment_amount
+        description: "Monto del pago realizado por el cliente, expresado en USD. Debe ser siempre mayor o igual a 0."
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+
+  - name: silver_contracted_services
+    description: "Servicios contratados por cada cliente. Cada fila representa un servicio individual vinculado a un cliente específico."
+    columns:
+      - name: customer_id
+        description: "Identificador del cliente al que pertenece el servicio. Siempre debe existir en silver_customers."
+        tests:
+          - not_null
+          - relationships:
+              to: ref('silver_customers')
+              field: customer_id
+      - name: service
+        description: "Nombre normalizado del servicio contratado. No puede ser vacío ni nulo."
+        tests:
+          - not_null
+          - dbt_utils.not_empty_string
+  - name: silver_qversity_engagement
+    description: "Interacciones de usuarios con contenido Qversity, normalizadas y enriquecidas."
+    columns:
+      - name: user_id
+        description: "Identificador único del usuario que interactúa con el contenido."
+        tests:
+          - not_null
+      - name: qversity_id
+        description: "ID del contenido/interacción en Qversity."
+        tests:
+          - not_null
+

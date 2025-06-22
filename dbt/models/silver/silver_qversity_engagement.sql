@@ -1,31 +1,36 @@
 {{ config(materialized='table') }}
 
--- Silver layer: Cleaned and enriched qversity content engagement metrics
-select 
+SELECT DISTINCT
     user_id,
     qversity_id,
-    case 
-        when qversity_id = 'qversity_python_fundamentals' then 'Python Fundamentals'
-        when qversity_id = 'qversity_airflow_orchestration' then 'Airflow Orchestration'
-        when qversity_id = 'qversity_dbt_transformations' then 'dbt Transformations'
-        when qversity_id = 'qversity_dwh_design' then 'Data Warehouse Design'
-        else qversity_id
-    end as qversity_name,
+    CASE 
+        WHEN qversity_id = 'qversity_python_fundamentals' THEN 'Python Fundamentals'
+        WHEN qversity_id = 'qversity_airflow_orchestration' THEN 'Airflow Orchestration'
+        WHEN qversity_id = 'qversity_dbt_transformations' THEN 'dbt Transformations'
+        WHEN qversity_id = 'qversity_dwh_design' THEN 'Data Warehouse Design'
+        ELSE qversity_id
+    END AS qversity_name,
     content_type,
     content_id,
     content_title,
-    case 
-        when content_type = 'video' then watch_time_seconds / 60.0
-        else 0 
-    end as watch_time_minutes,
-    case 
-        when content_type = 'video' and watch_time_seconds >= 900 then true  -- 15 min minimum for videos
-        when content_type in ('document', 'quiz') and completed then true
-        else false 
-    end as engagement_threshold_met,
+    CASE 
+        WHEN content_type = 'video' THEN watch_time_seconds / 60.0
+        ELSE 0 
+    END AS watch_time_minutes,
+    CASE 
+        WHEN content_type = 'video' AND watch_time_seconds >= 900 THEN true  -- 15 min minimum for videos
+        WHEN content_type IN ('document', 'quiz') AND completed THEN true
+        ELSE false 
+    END AS engagement_threshold_met,
     completed,
     interaction_timestamp,
     extract(hour from interaction_timestamp) as interaction_hour,
     extract(dow from interaction_timestamp) as interaction_day_of_week,
     current_timestamp as processed_at
-from {{ ref('bronze_qversity_interactions') }} 
+FROM {{ ref('bronze_qversity_interactions') }}
+WHERE
+    user_id IS NOT NULL
+    AND qversity_id IS NOT NULL
+    AND LENGTH(TRIM(qversity_id)) > 0
+    AND LENGTH(TRIM(user_id::text)) > 0
+
