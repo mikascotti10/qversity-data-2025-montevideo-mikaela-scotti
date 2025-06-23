@@ -34,10 +34,7 @@ La Bronze Layer representa la primera etapa de la arquitectura, centrada en la i
 
 ## SILVER Layer
 
-## Nota! 
-Hice el orchesting con Docker porque no me estaba funcionando bien dbt fuera de Docker.
-
-La **Silver Layer** representa la segunda etapa del pipeline, donde los datos son **limpiados, normalizados y estructurados** para su uso analítico. En esta fase, se eliminan inconsistencias, duplicados y nulos en campos clave, y se asegura la calidad de los datos mediante tests automáticos en dbt.
+La **Silver Layer** representa la segunda etapa del pipeline, donde los datos son limpiados, normalizados y estructurados para su uso analítico. En esta fase, se eliminan inconsistencias, duplicados y nulos en campos clave, y se asegura la calidad de los datos mediante tests automáticos en dbt.
 
 ### ¿Qué realiza esta capa?
 
@@ -46,7 +43,7 @@ La **Silver Layer** representa la segunda etapa del pipeline, donde los datos so
 
 * **Limpieza y flatten:**
 
-  * Se **“flatten”** todos los campos anidados y arrays del JSON original, convirtiéndolos en columnas simples.
+  * Se “flatten” todos los campos anidados y arrays del JSON original, convirtiéndolos en columnas simples.
   * Se normalizan estructuras como `contracted_services` y `payment_history`, generando una fila por cada servicio o pago asociado a un cliente.
   * Se estandarizan los formatos de fechas y tipos numéricos para evitar inconsistencias.
 
@@ -62,13 +59,13 @@ La **Silver Layer** representa la segunda etapa del pipeline, donde los datos so
 
 * **Control de calidad automatizado:**
 
-  * Todos los modelos Silver cuentan con **tests automáticos definidos en `schema.yml`**, que verifican:
+  * Todos los modelos Silver cuentan con tests automáticos definidos en `schema.yml`, que verifican:
 
     * Unicidad y no nulos en campos clave.
     * Rangos válidos en montos (`payment_amount`).
     * Integridad relacional entre tablas (`relationships`/foreign keys).
     * Que no existan strings vacíos donde no corresponde.
-  * **Todos los tests de calidad se ejecutan y pasan exitosamente**.
+  * Todos los tests de calidad se ejecutan y pasan exitosamente.
 
 #### Modelos Silver principales
 
@@ -146,5 +143,33 @@ Se filtraron de los modelos Gold los registros con datos faltantes críticos (po
 
 **Calidad y Tests:**
 Todos los modelos Gold están validados con tests de calidad en dbt (`not_null`, `accepted_values`, relaciones, etc.), garantizando que los datos sean consistentes y que los resultados sean reproducibles y auditables.
+
+---
+
+## Quick Start
+1. **Clonar este repositorio y navega a la carpeta principal del proyecto:**
+   ```bash
+   git clone <qversity-data-2025-montevideo-mikaela-scotti>
+   cd <qversity-data-2025-montevideo-mikaela-scotti>
+   ```
+2. **Levantar el entorno completo con Docker Compose:**
+   ```bash
+   docker compose up -d
+   ```
+
+3. **Accede a la interfaz de Airflow** (usualmente en [http://localhost:8095](http://localhost:8095))
+   Usuario y contraseña: `admin` / `admin`.
+
+## Run pipeline
+Desde Airflow:
+1. **Cargar los datos Bronze:**
+   * Corre el DAG para Bronze (bronze_ingest.py).
+2. **Transforma a Silver:**
+   * Corre el DAG `silver_pipeline`.
+3. **Transforma a Gold:**
+   * Corre el DAG `gold_pipeline`.
+
+## Run tests
+dbt test
 
 
