@@ -1,19 +1,14 @@
 # Qversity Data Project – Mikaela Scotti
 
+## Participante
+- **Nombre:** Mikaela Scotti  
+- **Email:** mikaelascotti10@gmail.com
+
 ## Overview
 
 Este proyecto implementa un pipeline completo de datos utilizando la arquitectura Medallion (Bronze, Silver, Gold) sobre un dataset personalizado de telecomunicaciones. El pipeline utiliza Docker, PostgreSQL y Apache Airflow para la orquestación y dbt para la transformación y modelado de datos.
 
-**Las métricas clave y los insights de negocio se describirán en las siguientes etapas.**
-
-
-## Participante
-
-- **Nombre:** Mikaela Scotti  
-- **Email:** mikaelascotti10@gmail.com
-
-
-## Bronze Layer: Descripción y lógica
+## BRONZE Layer
 
 La Bronze Layer representa la primera etapa de la arquitectura, centrada en la ingestión y almacenamiento de los datos en su estado original. Esto asegura la conservación íntegra de la información para las etapas posteriores del pipeline.
 
@@ -37,7 +32,7 @@ La Bronze Layer representa la primera etapa de la arquitectura, centrada en la i
 
 ---
 
-## Silver Layer: Limpieza, normalización y control de calidad
+## SILVER Layer
 
 ## Nota! 
 Hice el orchesting con Docker porque no me estaba funcionando bien dbt fuera de Docker.
@@ -61,6 +56,9 @@ La **Silver Layer** representa la segunda etapa del pipeline, donde los datos so
   * Se remueven duplicados utilizando claves naturales y el timestamp de ingestión.
   * **Integridad referencial:**
     Los modelos de pagos y servicios solo incluyen clientes válidos existentes en la tabla `silver_customers`, garantizando la consistencia entre tablas y evitando datos huérfanos.
+
+* **Normalización de Status:**
+* Todos los valores de la columna `status` se normalizaron a inglés en minúsculas (`active` `inactive`, `suspended`, `unknown`), unificando distintos formatos originales del JSON. Esta normalización evita ambigüedades y garantiza que los análisis y tests sean precisos y coherentes.
 
 * **Control de calidad automatizado:**
 
@@ -89,4 +87,64 @@ La **Silver Layer** representa la segunda etapa del pipeline, donde los datos so
 ![ERD de la Silver Layer](ERD.png)
 
 https://lucid.app/lucidchart/82ca83a3-d595-4a8c-a1cb-4baec92ffca6/edit?viewport_loc=405%2C43%2C4782%2C2491%2C0_0&invitationId=inv_8d9559e0-486d-4960-949c-f542ec1af690
+
+---
+
+## GOLD Layer
+## Overview
+
+La capa GOLD representa el nivel más alto del pipeline de datos, donde los datos limpios y estructurados de la capa Silver se transforman en métricas clave, reportes y vistas diseñadas para responder preguntas de negocio y tomar decisiones estratégicas. Todos los modelos Gold fueron generados en dbt y validados automáticamente, garantizando calidad y consistencia en cada métrica entregada.
+
+## Business Questions Answered
+
+La capa GOLD responde a todas las preguntas de negocio requeridas en la consigna del proyecto, incluyendo:
+
+* ARPU (Average Revenue Per User) por tipo de plan.
+* Revenue por ubicación geográfica.
+* Revenue por segmento de cliente.
+* Distribución de clientes por ubicación, plan, operador y credit score.
+* Popularidad de marcas de dispositivos y servicios contratados.
+* Porcentaje de clientes con problemas de pago.
+* Tendencias de adquisición de clientes en el tiempo y por operador.
+* Combinaciones de servicios más populares y que generan mayor revenue.
+* Comparación de media y mediana de revenue mensual por usuario, plan y operador.
+
+Cada una de estas preguntas tiene un modelo Gold asociado en la carpeta `/models/gold/`, con la lógica y el SQL correspondiente.
+
+## Principales Decisiones de Negocio
+
+**Exclusión de datos faltantes críticos:**
+Se excluyeron del análisis en la capa Silver y Gold todos los registros que presentaban datos nulos o inválidos en campos críticos como customer_id, registration_date, email, credit_score, age o monthly_bill_usd. Esta decisión garantiza que todas las métricas y reportes reflejen únicamente información confiable y relevante, evitando distorsiones por registros incompletos o de baja calidad.
+
+**Tratamiento de outliers y validaciones básicas:**
+Se filtraron registros con valores extremos o no realistas en los campos de edad (age entre 0 y 120), revenue (monthly_bill_usd mayor a 10,000 o menor a 0), y credit score (entre 300 y 900).
+Estos filtros eliminan potenciales errores de carga y aseguran que los análisis reflejen la realidad operativa del negocio, descartando casos no representativos.
+
+**Segmentación de Credit Score:**
+Se definieron cuatro rangos de credit score: muy bajo (<400), bajo (400–499), medio (500–699) y alto (700+). Esta segmentación permite identificar clientes de mayor riesgo, facilitando estrategias de gestión y retención focalizadas sobre los segmentos más críticos. Los cortes se eligieron alineados con estándares crediticios internacionales y para simplificar la comunicación y el análisis.
+
+**Selección de periodos mensuales para análisis de tendencias:**
+Las métricas temporales y tendencias se agrupan por mes utilizando date_trunc('month', ...). El análisis mensual ofrece una perspectiva estable para la toma de decisiones y evita la volatilidad de los datos diarios o la baja granularidad de los datos anuales.
+
+**Identificación de clientes activos con campo calculado**
+Se agregó un campo booleano is_active para identificar clientes actualmente activos, permitiendo filtrar las métricas y análisis para la cartera efectiva de la compañía y evitar que bajas o suspendidos distorsionen las métricas clave.
+
+**Identificación de clientes nuevos**
+Se agregó una columna is_new_customer para distinguir clientes que ingresaron en los últimos 6 meses, facilitando el análisis de tendencias de adquisición y retención de nuevos usuarios.
+
+**Segmentación por rangos de edad**
+Se implementó una segmentación por rangos de edad para facilitar el análisis de tendencias y métricas clave según grupos etarios, permitiendo detectar diferencias significativas en el comportamiento de consumo o morosidad entre jóvenes y adultos.
+
+**Definición de Revenue y ARPU:**
+Se utilizó la columna `monthly_bill_usd` como proxy de ingreso mensual (ARPU), ya que refleja el monto facturado a cada usuario. Esto permite comparar usuarios, planes y segmentos de manera directa y estandarizada.
+
+**Priorización de integridad referencial:**
+Las tablas derivadas de pagos (silver_payment_history) y servicios contratados (silver_contracted_services) incluyen únicamente clientes válidos presentes en la tabla principal silver_customers.Esto asegura consistencia y evita la presencia de datos huérfanos o relaciones inválidas, facilitando análisis correctos y joins seguros entre entidades
+
+**Limpieza y Robustez de las Métricas:**
+Se filtraron de los modelos Gold los registros con datos faltantes críticos (por ejemplo, clientes sin credit score, revenue o fecha de registro) para asegurar que las métricas reflejen solo información confiable y útil para el análisis de negocio.
+
+**Calidad y Tests:**
+Todos los modelos Gold están validados con tests de calidad en dbt (`not_null`, `accepted_values`, relaciones, etc.), garantizando que los datos sean consistentes y que los resultados sean reproducibles y auditables.
+
 

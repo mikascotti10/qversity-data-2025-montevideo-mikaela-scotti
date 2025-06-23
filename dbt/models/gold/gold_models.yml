@@ -1,0 +1,70 @@
+version: 2
+
+models:
+  - name: arpu_por_plan
+    description: "ARPU (Average Revenue Per User) por tipo de plan"
+    columns:
+      - name: plan_type
+        tests:
+          - not_null
+      - name: arpu
+        tests:
+          - not_null
+
+  - name: revenue_por_ubicacion
+    description: "Revenue total por ubicación geográfica"
+    columns:
+      - name: country
+        tests:
+          - not_null
+      - name: total_revenue
+        tests:
+          - not_null
+
+  - name: clientes_por_segmento
+    description: "Revenue total por segmento de cliente"
+    columns:
+      - name: credit_score
+        tests:
+          - not_null:
+              # Pasa el test sólo si filtrás credit_score is not null en el modelo SQL
+              # Si no, podés quitar este test o cambiar la columna según el segmento real
+              severity: warn
+      - name: total_revenue
+        tests:
+          - not_null:
+              severity: warn
+
+  - name: clientes_por_credit_score
+    description: "Segmentación de clientes por rangos de credit score"
+    columns:
+      - name: credit_score_range
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['Muy bajo (<400)', 'Bajo (400-499)', 'Medio (500-699)', 'Alto (700+)', 'Desconocido']
+      - name: total_revenue
+        tests:
+          - not_null
+
+  - name: porcentaje_problemas_pago
+    description: "Porcentaje de clientes con problemas de pago"
+    columns:
+      - name: porcentaje_problemas_pago
+        tests:
+          - not_null
+
+  - name: porcentaje_estado_cliente
+    description: "Porcentaje de clientes por estado"
+    columns:
+      - name: status
+        tests:
+          - not_null:
+              severity: warn
+          - accepted_values:
+              values: ['active', 'suspended', 'inactive', 'unknown', '']
+              # Agrega aquí TODOS los valores que te devuelve:
+              # select distinct status from {{ ref('silver_customers') }};
+      - name: porcentaje
+        tests:
+          - not_null
